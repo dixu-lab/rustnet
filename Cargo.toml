@@ -1,0 +1,9 @@
+[package]
+name = "rustnet"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+etherparse = "0.21.0"
+pcap = { version = "2.5.0", features = ["capture-stream"] }
+tokio = { version = "1.53.2", features = ["full"] }
