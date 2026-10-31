@@ -1,56 +1,40 @@
-mod rcv_pkt;
 mod parse;
+mod rcv_pkt;
+mod update_devices;
 
-use tokio::task::JoinHandle;
-use pcap::{ Device};
-use tokio;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use dashmap;
 use dashmap::DashMap;
-use dashmap::mapref::entry::Entry;
+use pcap::Device;
+use tokio;
+use update_devices::Devicetask;
 
-fn get_devices()->Result<Vec<Device>,pcap::Error>{
-
+fn get_devices() -> Result<Vec<Device>, pcap::Error> {
     let devices = Device::list()?;
     Ok(devices)
-
-}
-async fn update_devices(device_map:& mut DashMap<String,  JoinHandle<  Result<(),Box <dyn std::error::Error + Send + Sync>  >  >  >)-> Result<(), Box<dyn std::error::Error>> {
-    let mut interval = tokio::time::interval(
-        tokio::time::Duration::from_secs(1)
-    );
-    loop{
-        let devices =   get_devices()?;
-        for device in devices {
-            let id = device.name.clone();
-            match device_map.entry(id) {
-                Entry::Vacant(entry) => {
-                        //insert & spawn
-                   let handler = tokio::task::spawn_blocking(move || {
-                        rcv_pkt::rcv_pkt(device)
-                    });
-                    entry.insert(handler);
-                }
-                Entry::Occupied(_) => {
-                    //eat five star
-                }
-            }
-        }
-
-        interval.tick().await;
-    }
-
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
+    let  device_map:Arc< DashMap<String, Devicetask>> = Arc::new(DashMap::new());
+    tokio::select! {
+         result = update_devices::update_devices( device_map.clone()) => {
+   
+        }
 
-   let mut device_map:DashMap<String,   JoinHandle<  Result<(),Box <dyn std::error::Error +Send+Sync>  >  >  >  = DashMap::new();
-    update_devices(&mut device_map).await?;
+        result = tokio::signal::ctrl_c() => {
+            println!("Control C exit ... ");
+            for task in device_map.iter() {
+                task.stop.store(true, Ordering::Relaxed);
+             }
+        }
+
+    }
 
 
 
-    tokio::signal::ctrl_c().await?;
-    println!("exiting with ctrl c");
+    
     Ok(())
 }
