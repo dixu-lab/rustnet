@@ -1,6 +1,7 @@
 mod parse;
 mod rcv_pkt;
 mod update_devices;
+mod models;
 
 use std::sync::Arc;
 use std::sync::atomic::Ordering;

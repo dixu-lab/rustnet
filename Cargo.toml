@@ -8,3 +8,4 @@ dashmap = "6.2.1"
 etherparse = "0.21.0"
 pcap = { version = "2.5.0", features = ["capture-stream"] }
 tokio = { version = "1.53.2", features = ["full"] }
+log = "0.4.35"
